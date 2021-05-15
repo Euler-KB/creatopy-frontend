@@ -1,19 +1,14 @@
-import React, {useCallback, useEffect} from 'react';
+import React, {useEffect} from 'react';
 import DocumentTitle from "../../Components/DocumentTitle";
 import * as yup from 'yup';
-import {makeStyles} from "@material-ui/core/styles";
 import Avatar from '@material-ui/core/Avatar';
 import Button from '@material-ui/core/Button';
-import TextField from '@material-ui/core/TextField';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Checkbox from '@material-ui/core/Checkbox';
 import Link from '@material-ui/core/Link';
 import Grid from '@material-ui/core/Grid';
-import Box from '@material-ui/core/Box';
 import LockOutlinedIcon from '@material-ui/icons/LockOutlined';
 import Typography from '@material-ui/core/Typography';
 import Container from '@material-ui/core/Container';
-import { Formik , Form } from "formik";
+import {Form, Formik, FormikHelpers} from "formik";
 import useStyles from '../../shared/styles';
 import {FormInput} from "../../Components/FormInput";
 import {useDispatch, useSelector} from "react-redux";
@@ -23,7 +18,12 @@ import _ from 'lodash';
 import {useHistory} from "react-router-dom";
 import {HistoryLink} from "../../Components/HistoryLink";
 
-const initialValues = {
+type LoginFormValues = {
+    username: string,
+    password: string
+}
+
+const initialValues: LoginFormValues = {
     username: '',
     password: ''
 };
@@ -33,37 +33,37 @@ const loginForm = yup.object({
     password: yup.string().label("Password").required()
 });
 
-const Login = () => {
+const Login = (): React.ReactElement => {
 
     const classes = useStyles();
     const dispatch = useDispatch();
     const history = useHistory();
     const auth = useSelector(selectAuth);
-    const { status , user , error } = auth;
+    const {status, user, error} = auth;
 
-    const onSubmit = (values, { setSubmitting }) => {
-        dispatch( loginAsync({ username: values.username , password: values.password }) );
+    const onSubmit = (values: LoginFormValues, {setSubmitting}: FormikHelpers<LoginFormValues>) => {
+        dispatch(loginAsync({username: values.username, password: values.password}));
         setSubmitting(false);
     }
 
     useEffect(() => {
-        dispatch( clearState() );
-    },[]);
+        dispatch(clearState());
+    }, []);
 
     //  route to login
     useEffect(() => {
 
-        if(status === 'complete' && !_.isNil(user))
+        if (status === 'complete' && !_.isNil(user))
             return history.push('/dashboard');
 
-    },[user,status]);
+    }, [user, status]);
 
 
     return <DocumentTitle title={"Login"}>
         <Container component="main" maxWidth="xs">
             <div className={classes.paper}>
                 <Avatar className={classes.avatar}>
-                    <LockOutlinedIcon />
+                    <LockOutlinedIcon/>
                 </Avatar>
                 <Typography component="h1" variant="h5">
                     Creatopy Demo - Login
@@ -72,7 +72,7 @@ const Login = () => {
                 <Formik initialValues={initialValues}
                         validationSchema={loginForm}
                         onSubmit={onSubmit}>
-                    {({ values , errors, setFieldValue }) => (<Form>
+                    {({values, errors, setFieldValue}) => (<Form>
 
                         <FormInput name={"username"}
                                    type={"text"}
@@ -86,7 +86,8 @@ const Login = () => {
                                    autoComplete="current-password"/>
 
                         {status === 'loading' && <LinearProgress/>}
-                        {status === 'failed' && <Typography color={'error'} component={"body2"} gutterBottom>{error}</Typography>}
+                        {status === 'failed' &&
+                        <Typography color={'error'} variant={"body2"} gutterBottom>{error}</Typography>}
 
                         <Button
                             type="submit"

@@ -1,9 +1,51 @@
-import {createSlice , createAsyncThunk } from "@reduxjs/toolkit";
+import {createAsyncThunk, createSlice} from "@reduxjs/toolkit";
 import {gql} from "@apollo/client";
 import client from "../../shared/api";
 import _ from 'lodash';
 import {AUTH_TICKET_FRAGMENT, LOGIN_RESPONSE_FRAGMENT, USER_FRAGMENT} from "../../shared/fragments";
 import {withData} from "../../shared/utils";
+import {RootState} from "../store";
+
+export type UserInfo = {
+    id: number
+    username: string
+    name: string
+    phone?: string
+    email?: string
+    created_at: string
+    last_updated: string
+}
+
+export type AuthStateType = {
+    accessToken?: string | null
+    user?: UserInfo | null
+    status?: string,
+    error?: string | null
+}
+
+export type AuthenticationTicket = {
+    accessToken?: string
+    user?: UserInfo
+}
+
+export type SignUpInput = {
+    username: string
+    name: string
+    phone?: string
+    email?: string
+    password: string
+    confirmPassword: string
+}
+
+export type LoginInputs = {
+    username: string
+    password: string
+}
+
+export type LoginResponse = {
+    status: string
+    ticket: AuthenticationTicket
+}
 
 const schema = {
     Query: {
@@ -40,7 +82,7 @@ const schema = {
     }
 };
 
-const persistTicket = (ticket) => {
+const persistTicket = (ticket: AuthenticationTicket) => {
 
     //  persist info
     window.localStorage.setItem('@auth', JSON.stringify({
@@ -50,20 +92,20 @@ const persistTicket = (ticket) => {
 
 };
 
-export const selectAuth = x => x.auth;
-export const selectUser = x => x.auth.user;
-export const selectToken = x => x.auth.accessToken;
+export const selectAuth = (x: RootState): AuthStateType => x.auth;
+export const selectUser = (x: RootState): UserInfo => x.auth.user as UserInfo;
+export const selectToken = (x: RootState): string => x.auth.accessToken as string;
 
-export const getCurrentUser = createAsyncThunk('auth/user', async (values,thunkAPI) => {
+export const getCurrentUser = createAsyncThunk<UserInfo>('auth/user', async (values, thunkAPI) => {
 
     const response = await client.query({
         query: schema.Query.user
     });
 
-    return withData(response,thunkAPI,'user');
+    return withData(response, thunkAPI, 'user');
 });
 
-export const loginAsync = createAsyncThunk('auth/login',async ({ username , password }, thunkAPI) => {
+export const loginAsync = createAsyncThunk<LoginResponse, LoginInputs>('auth/login', async ({username, password}, thunkAPI) => {
 
     const response = await client.mutate({
         mutation: schema.Mutation.login,
@@ -74,15 +116,15 @@ export const loginAsync = createAsyncThunk('auth/login',async ({ username , pass
     });
 
     //  process authentication response
-    if(response.data?.login?.status === 'success'){
+    if (response.data?.login?.status === 'success') {
         persistTicket(response.data.login.ticket);
     }
 
-    return withData(response,thunkAPI,'login');
+    return withData(response, thunkAPI, 'login');
 });
 
 
-export const signUpAsync = createAsyncThunk('auth/signup',async (values,thunkAPI) => {
+export const signUpAsync = createAsyncThunk<AuthenticationTicket, SignUpInput>('auth/signup', async (values, thunkAPI) => {
 
     const response = await client.mutate({
         mutation: schema.Mutation.signUp,
@@ -92,17 +134,17 @@ export const signUpAsync = createAsyncThunk('auth/signup',async (values,thunkAPI
     });
 
     //  process authentication response
-    if(!_.isNil(response.data)){
+    if (!_.isNil(response.data)) {
         persistTicket(response.data.signUp);
     }
 
-    return withData(response,thunkAPI,'signUp');
+    return withData<AuthenticationTicket>(response, thunkAPI, 'signUp');
 });
 
-const getInitialState = () => {
+const getInitialState = (): AuthStateType => {
 
     const _auth = window.localStorage.getItem('@auth');
-    if(_auth)return  { ...JSON.parse(_auth) , status : 'idle' , error: null } ;
+    if (_auth) return {...JSON.parse(_auth), status: 'idle', error: null};
 
     return {
         accessToken: null,
@@ -124,7 +166,7 @@ const authSlice = createSlice({
             state.error = null;
         },
 
-        login: (state,action) => {
+        login: (state, action) => {
             state.user = action.payload.user;
             state.accessToken = action.payload.accessToken;
         },
@@ -137,9 +179,8 @@ const authSlice = createSlice({
             window.localStorage.removeItem('@auth');
         }
     },
-    extraReducers: {
-
-        [loginAsync.fulfilled]: (state,action) => {
+    extraReducers: builder => {
+        builder.addCase(loginAsync.fulfilled, (state, action) => {
             const response = action.payload;
             switch (response.status) {
                 case 'success':
@@ -154,33 +195,36 @@ const authSlice = createSlice({
                 default:
                     break;
             }
-        },
-        [loginAsync.rejected]: (state,action) => {
+        });
+
+        builder.addCase(loginAsync.rejected, (state, action) => {
             state.status = 'failed';
             state.error = action.error.message;
-        },
-        [loginAsync.pending]: (state) => {
-            state.status = 'loading'
-        },
+        });
 
-        [signUpAsync.fulfilled]: (state,action) => {
+        builder.addCase(loginAsync.pending, (state) => {
+            state.status = 'loading'
+        });
+
+        builder.addCase(signUpAsync.fulfilled, (state, action) => {
             const response = action.payload;
             state.user = response.user;
             state.accessToken = response.accessToken;
             state.status = 'complete';
-        },
+        });
 
-        [signUpAsync.pending]: (state,action) => {
+        builder.addCase(signUpAsync.pending, (state, action) => {
             state.status = 'loading';
-        },
+        });
 
-        [signUpAsync.rejected]: (state,action) => {
+        builder.addCase(signUpAsync.rejected, (state, action) => {
             state.status = 'failed';
             state.error = action.error.message;
-        }
+        });
+
     }
 });
 
-export const { login , logout , clearState } = authSlice.actions;
+export const {login, logout, clearState} = authSlice.actions;
 
 export default authSlice.reducer;

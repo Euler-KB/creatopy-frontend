@@ -1,7 +1,7 @@
 import React from 'react';
-import {Router, Switch, Route, Redirect, useLocation} from 'react-router-dom';
+import {Redirect, Route, Router, Switch} from 'react-router-dom';
 import history from './history';
-import { useSelector } from "react-redux";
+import {useSelector} from "react-redux";
 import _ from 'lodash';
 import Login from "./Views/Login/Login";
 import ForgotPassword from "./Views/PasswordReset/ForgotPassword";
@@ -9,7 +9,7 @@ import SignUp from "./Views/SignUp/SignUp";
 import Dashboard from "./Views/Dashboard/Dashboard";
 import {selectAuth} from "./redux/features/authSlice";
 
-const IndexLayout = () => {
+const IndexLayout: React.FC = () => {
     return <Switch>
         <Route path={'/login'} component={Login}/>
         <Route path={'/forgot-password'} component={ForgotPassword}/>
@@ -21,7 +21,7 @@ const IndexLayout = () => {
     </Switch>;
 }
 
-const MainLayout = () => {
+const MainLayout: React.FC = () => {
     return <Switch>
         <Route path={"/dashboard"} component={Dashboard}/>
         <Route path='/' render={() => {
@@ -30,10 +30,10 @@ const MainLayout = () => {
     </Switch>
 };
 
-const Routes = () => {
+const Routes: React.FC = () => {
     const auth = useSelector(selectAuth);
     return <Router history={history}>
-        {!_.isNil(auth.user) ? <MainLayout/>: <IndexLayout/> }
+        {!_.isNil(auth.user) ? <MainLayout/> : <IndexLayout/>}
     </Router>
 
 };

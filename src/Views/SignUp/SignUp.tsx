@@ -2,10 +2,9 @@ import React, {useEffect} from 'react';
 import DocumentTitle from "../../Components/DocumentTitle";
 import * as yup from 'yup';
 import Avatar from "@material-ui/core/Avatar";
-import LockOutlinedIcon from "@material-ui/icons/LockOutlined";
 import PersonAddIcon from '@material-ui/icons/PersonAdd';
 import Typography from "@material-ui/core/Typography";
-import {Form, Formik} from "formik";
+import {Form, Formik, FormikHelpers} from "formik";
 import Button from "@material-ui/core/Button";
 import Grid from "@material-ui/core/Grid";
 import Link from "@material-ui/core/Link";
@@ -13,14 +12,23 @@ import Container from "@material-ui/core/Container";
 import useStyles from '../../shared/styles';
 import {FormInput} from "../../Components/FormInput";
 import {useDispatch, useSelector} from "react-redux";
-import {clearState, selectAuth, signUpAsync} from "../../redux/features/authSlice";
+import {clearState, selectAuth, signUpAsync, SignUpInput} from "../../redux/features/authSlice";
 import LinearProgress from "@material-ui/core/LinearProgress";
 import {useHistory} from "react-router";
 import _ from 'lodash';
 import Box from "@material-ui/core/Box";
 import {HistoryLink} from "../../Components/HistoryLink";
 
-const initialValues = {
+type SignUpFormValues = {
+    username: string
+    name: string
+    phone: string
+    email: string
+    password: string
+    confirmPassword: string
+}
+
+const initialValues: SignUpFormValues = {
     username: '',
     name: '',
     phone: '',
@@ -40,36 +48,36 @@ const signUpForm = yup.object({
         .label("Confirm password")
 });
 
-const SignUp = () => {
+const SignUp = (): React.ReactElement => {
 
     const classes = useStyles();
     const dispatch = useDispatch();
     const history = useHistory();
-    const { status , error, user  } = useSelector(selectAuth);
+    const {status, error, user} = useSelector(selectAuth);
 
-    const onSubmit = (values,{ setSubmitting }) => {
-        dispatch(signUpAsync(values));
+    const onSubmit = (values: SignUpFormValues, {setSubmitting}: FormikHelpers<SignUpFormValues>) => {
+        dispatch(signUpAsync(values as SignUpInput));
         setSubmitting(false);
     };
 
     useEffect(() => {
-        dispatch( clearState() );
-    },[]);
+        dispatch(clearState());
+    }, []);
 
 
     //  route to login
     useEffect(() => {
 
-        if(status === 'complete' && !_.isNil(user))
+        if (status === 'complete' && !_.isNil(user))
             return history.push('/dashboard');
 
-    },[user,status]);
+    }, [user, status]);
 
     return <DocumentTitle title={"Sign Up"}>
         <Container component="main" maxWidth="xs">
             <div className={classes.paper}>
                 <Avatar className={classes.avatar}>
-                    <PersonAddIcon />
+                    <PersonAddIcon/>
                 </Avatar>
                 <Typography component="h1" variant="h5">
                     Sign Up
@@ -78,7 +86,7 @@ const SignUp = () => {
                 <Formik initialValues={initialValues}
                         validationSchema={signUpForm}
                         onSubmit={onSubmit}>
-                    {({ values , errors, setFieldValue }) => (<Form>
+                    {({values, errors, setFieldValue}) => (<Form>
 
                         <FormInput name={"username"}
                                    type={"text"}
@@ -101,7 +109,6 @@ const SignUp = () => {
                                    label={"Phone"}
                                    autoComplete="phone"/>
 
-
                         <FormInput name={"password"}
                                    type={"password"}
                                    label={"Password"}
@@ -114,7 +121,8 @@ const SignUp = () => {
 
                         {status === 'loading' && <LinearProgress/>}
 
-                        {status === 'failed' && <Typography color={'error'} component={"body2"} gutterBottom>{error}</Typography>}
+                        {status === 'failed' &&
+                        <Typography color={'error'} variant={"body2"} gutterBottom>{error}</Typography>}
 
                         <Button
                             type="submit"

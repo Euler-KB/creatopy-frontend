@@ -1,11 +1,20 @@
 import React from 'react';
-import  { Field } from "formik";
+import {Field, FieldAttributes} from "formik";
 import TextField from "@material-ui/core/TextField";
 
-export const FormInput = ({ name , label , type , fullWidth = true , variant = "outlined" , ...props }) =>{
+type FormInputProps = {
+    name: string
+    label?: string
+    type: string
+    fullWidth?: boolean
+    variant?: "outlined" | "standard" | "filled",
+    [key: string]: any
+};
+
+export const FormInput: React.FC<FormInputProps> = ({name, label, type, fullWidth = true, variant = "outlined", ...props}: FormInputProps) => {
 
     return <Field name={name}>
-        {({ field: { value } , form: { setFieldValue , validateField , setFieldTouched ,  errors }}) => {
+        {({field: {value}, form: {setFieldValue, validateField, setFieldTouched, errors}}: FieldAttributes<any>) => {
             return <TextField
                 variant={variant}
                 margin="normal"
@@ -19,10 +28,10 @@ export const FormInput = ({ name , label , type , fullWidth = true , variant = "
                 helperText={errors[name]}
                 value={value}
                 onBlur={e => {
-                    setFieldTouched(name,true,false);
+                    setFieldTouched(name, true, false);
                     validateField(name);
                 }}
-                onChange={e => setFieldValue(name,e.target.value,false)}
+                onChange={e => setFieldValue(name, e.target.value, false)}
                 {...props}
             />
         }}
