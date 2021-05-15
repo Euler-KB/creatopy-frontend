@@ -1,9 +1,34 @@
-import { createSlice } from "@reduxjs/toolkit";
-import { createAsyncThunk } from "@reduxjs/toolkit";
+import {createAsyncThunk, createSlice} from "@reduxjs/toolkit";
 import client from "../../shared/api";
-import { gql } from '@apollo/client'
+import {gql} from '@apollo/client'
 import {ITEM_FRAGMENT} from "../../shared/fragments";
 import {withData} from "../../shared/utils";
+import {RootState} from "../store";
+
+
+export type ItemType = {
+    id: number
+    title: string
+    user_id: string
+    created_at: string
+    last_updated: string
+}
+
+export type ItemStateType = {
+    status: string
+    error: string | null
+    data: ItemType []
+};
+
+export type FetchAllItemsOptions = {
+    page?: number
+    limit?: number
+}
+
+export type CreateItemInput = {
+    title: string
+}
+
 
 const schema = {
     Query: {
@@ -44,7 +69,7 @@ const schema = {
     }
 };
 
-export const fetchAllItems = createAsyncThunk('items/getAll' , async ({ page , limit },  thunkAPI) => {
+export const fetchAllItems = createAsyncThunk<ItemType[], FetchAllItemsOptions>('items/getAll', async ({page, limit}, thunkAPI) => {
 
     const response = await client.query({
         query: schema.Query.items,
@@ -54,10 +79,10 @@ export const fetchAllItems = createAsyncThunk('items/getAll' , async ({ page , l
         }
     });
 
-    return withData(response,thunkAPI,'items');
+    return withData<ItemType[]>(response, thunkAPI, 'items');
 });
 
-export const createItemAsync = createAsyncThunk('items/create',async ({ title },thunkAPI) => {
+export const createItemAsync = createAsyncThunk<ItemType, CreateItemInput>('items/create', async ({title}, thunkAPI) => {
 
     const response = await client.mutate({
         mutation: schema.Mutation.createItem,
@@ -68,10 +93,10 @@ export const createItemAsync = createAsyncThunk('items/create',async ({ title },
         }
     });
 
-    return withData(response,thunkAPI,'createItem');
+    return withData<ItemType>(response, thunkAPI, 'createItem');
 });
 
-export const removeItemById = createAsyncThunk('items/removeById' , async (id,thunkAPI) =>{
+export const removeItemById = createAsyncThunk<boolean, number>('items/removeById', async (id, thunkAPI) => {
 
     const response = await client.mutate({
         mutation: schema.Mutation.removeItem,
@@ -80,62 +105,70 @@ export const removeItemById = createAsyncThunk('items/removeById' , async (id,th
         }
     });
 
-    return withData(response,thunkAPI,'removeItem');
+    return withData<boolean>(response, thunkAPI, 'removeItem');
 });
 
-export const selectItems = x => x.items;
+export const selectItems = (x: RootState): ItemStateType => x.items;
+
+const initialState: ItemStateType = {
+    status: '',
+    error: null,
+    data: [],
+};
 
 const itemsSlice = createSlice({
     name: 'items',
-    initialState: {
-        status: '',
-        error: null,
-        data: [],
-    },
+    initialState,
     reducers: {
 
-        createItem: (state,action) => {
+        createItem: (state, action) => {
             state.data.push(action.payload);
         },
 
-        removeItem: (state,action) => {
+        clearState: state => {
+            state.status = '';
+            state.data = [];
+            state.error = null;
+        },
+        removeItem: (state, action) => {
 
             const index = state.data.findIndex(x => x.id === action.payload.id);
-            if(index >=0 ){
-                state.data.splice(index,1);
+            if (index >= 0) {
+                state.data.splice(index, 1);
             }
         }
 
     },
-    extraReducers: {
-
-        [fetchAllItems.fulfilled]: (state,action) => {
+    extraReducers: builder => {
+        builder.addCase(fetchAllItems.fulfilled, (state, action) => {
             state.data = action.payload;
             state.status = 'loaded';
-        },
-        [fetchAllItems.rejected]: (state,action) => {
-            state.status = 'failed';
-            state.error = action.error.message;
-        },
-        [fetchAllItems.pending]: (state,action) => {
-            state.status = 'loading';
-        },
+            console.log(action);
+        });
 
-        //  todo add other actions here
-        [createItemAsync.fulfilled]: (state,action) => {
+        builder.addCase(fetchAllItems.rejected, (state, action) => {
+            state.status = 'failed';
+            state.error = action.error.message as string;
+        });
+
+        builder.addCase(fetchAllItems.pending, (state, action) => {
+            state.status = 'loading';
+        });
+
+        builder.addCase(createItemAsync.fulfilled, (state, action) => {
             state.data.push(action.payload);
             state.status = 'added';
-        },
-        [createItemAsync.rejected]: (state,action) => {
-            state.error = action.error.message;
+        });
+        builder.addCase(createItemAsync.rejected, (state, action) => {
+            state.error = action.error.message as string;
             state.status = 'failed';
-        },
-        [createItemAsync.pending]: (state,action) => {
+        });
+        builder.addCase(createItemAsync.pending, (state, action) => {
             state.status = 'adding';
-        }
+        });
     }
 })
 
-export  const { createItem , removeItem } = itemsSlice.actions;
+export const {createItem, removeItem,clearState} = itemsSlice.actions;
 
 export default itemsSlice.reducer;

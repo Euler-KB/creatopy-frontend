@@ -2,6 +2,31 @@ import {createAsyncThunk, createSlice} from "@reduxjs/toolkit";
 import client from "../../shared/api";
 import {gql} from "@apollo/client";
 import {withData} from "../../shared/utils";
+import {RootState} from "../store";
+
+export type ForgotPasswordState = {
+    status: string
+    code?: string | null
+    id?: any
+    confirmUsername: boolean
+    error?: string | null
+};
+
+export type BeginPasswordInput = {
+    username: string
+}
+
+export type ResetPasswordInput = {
+    id: string
+    code: string
+    newPassword: string
+    confirmPassword: string
+}
+
+export type ForgotPasswordResponse = {
+    id: string
+    token: string
+}
 
 const schema = {
     Mutation: {
@@ -21,10 +46,10 @@ const schema = {
     }
 }
 
-export const selectForgotPassword = x => x.forgotPassword;
+export const selectForgotPassword = (x: RootState): ForgotPasswordState => x.forgotPassword;
 
 
-export const beginPasswordReset = createAsyncThunk('forgotPassword/begin',async ({ username },thunkAPI) => {
+export const beginPasswordReset = createAsyncThunk<ForgotPasswordResponse, BeginPasswordInput>('forgotPassword/begin', async ({username}, thunkAPI) => {
 
     const response = await client.mutate({
         mutation: schema.Mutation.forgotPassword,
@@ -33,10 +58,10 @@ export const beginPasswordReset = createAsyncThunk('forgotPassword/begin',async 
         }
     });
 
-    return withData(response,thunkAPI,'forgotPassword');
+    return withData<ForgotPasswordResponse>(response, thunkAPI, 'forgotPassword');
 });
 
-export const completePasswordReset = createAsyncThunk('forgotPassword/complete', async ({ id, code , newPassword, confirmPassword },thunkAPI) => {
+export const completePasswordReset = createAsyncThunk<boolean, ResetPasswordInput>('forgotPassword/complete', async ({id, code, newPassword, confirmPassword}, thunkAPI) => {
 
     const response = await client.mutate({
         mutation: schema.Mutation.resetPassword,
@@ -48,18 +73,21 @@ export const completePasswordReset = createAsyncThunk('forgotPassword/complete',
         }
     });
 
-    return withData(response,thunkAPI,'resetPassword');
+    return withData<boolean>(response, thunkAPI, 'resetPassword');
 });
+
+
+const initialState: ForgotPasswordState = {
+    status: '',
+    code: '',
+    id: '',
+    confirmUsername: false,
+    error: null
+};
 
 const forgotPasswordSlice = createSlice({
     name: 'forgotPassword',
-    initialState: {
-        status: '',
-        code: '',
-        id: '',
-        confirmUsername: false,
-        error: null
-    },
+    initialState,
     reducers: {
 
         clearState: (state) => {
@@ -71,36 +99,41 @@ const forgotPasswordSlice = createSlice({
         }
     },
 
-    extraReducers: {
-        [beginPasswordReset.fulfilled]: (state,action) => {
+    extraReducers: builder => {
+
+        builder.addCase(beginPasswordReset.fulfilled, (state, action) => {
             state.confirmUsername = true;
-            state.code  = action.payload.token;
+            state.code = action.payload.token;
             state.id = action.payload.id;
             state.status = 'confirm_username';
-        },
-        [beginPasswordReset.rejected]: (state,action) => {
+        });
+
+        builder.addCase(beginPasswordReset.rejected, (state, action) => {
             state.status = 'failed';
             state.error = action.error.message;
-        },
-        [beginPasswordReset.pending]: (state,action) => {
+        });
+
+        builder.addCase(beginPasswordReset.pending, (state, action) => {
             state.status = 'loading';
-        },
+        });
 
-
-        [completePasswordReset.fulfilled]: (state,action) => {
+        builder.addCase(completePasswordReset.fulfilled, (state, action) => {
             state.status = 'complete';
-        },
-        [completePasswordReset.rejected]: (state,action) => {
+        });
+
+        builder.addCase(completePasswordReset.rejected, (state, action) => {
             state.status = 'failed';
             state.error = action.error.message;
-        },
-        [completePasswordReset.pending]: (state,action) => {
+        });
+
+        builder.addCase(completePasswordReset.pending, (state, action) => {
             state.status = 'loading';
-        },
+        });
+
 
     }
 });
 
-export const { clearState } = forgotPasswordSlice.actions;
+export const {clearState} = forgotPasswordSlice.actions;
 
 export default forgotPasswordSlice.reducer;
