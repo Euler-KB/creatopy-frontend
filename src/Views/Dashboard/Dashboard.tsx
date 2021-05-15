@@ -1,15 +1,9 @@
 import React, {useEffect, useState} from 'react';
 import DocumentTitle from "../../Components/DocumentTitle";
-import Avatar from "@material-ui/core/Avatar";
-import LockOutlinedIcon from "@material-ui/icons/LockOutlined";
 import Typography from "@material-ui/core/Typography";
-import {Form, Formik} from "formik";
 import TextField from "@material-ui/core/TextField";
 import Button from "@material-ui/core/Button";
-import Grid from "@material-ui/core/Grid";
-import Link from "@material-ui/core/Link";
 import Container from "@material-ui/core/Container";
-import useStyles from '../../shared/styles';
 import Box from '@material-ui/core/Box';
 import {useDispatch, useSelector} from "react-redux";
 import {createItemAsync, fetchAllItems, selectItems} from '../../redux/features/itemsSlice';
@@ -20,31 +14,34 @@ import Paper from '@material-ui/core/Paper';
 import moment from 'moment';
 import Divider from "@material-ui/core/Divider";
 import {logout, selectUser} from "../../redux/features/authSlice";
+import { clearState } from '../../redux/features/itemsSlice';
 import ExitToAppIcon from '@material-ui/icons/ExitToApp';
 import LinearProgress from "@material-ui/core/LinearProgress";
 
 const Dashboard = () => {
 
     const dispatch = useDispatch();
-    const [title,setTitle] = useState('');
-    const { data , status , error } = useSelector(selectItems);
+    const [title, setTitle] = useState<string>('');
+    const {data, status, error} = useSelector(selectItems);
     const user = useSelector(selectUser);
 
     const addItem = () => {
-        if(title.trim().length === 0)return window.alert('Please enter a valid title');
-        dispatch( createItemAsync({ title }) );
+        if (title.trim().length === 0) return window.alert('Please enter a valid title');
+        dispatch(createItemAsync({title}));
         setTitle('');
     };
 
     const handleLogout = () => {
-        if(window.confirm('Are you sure you want to logout')){
+        if (window.confirm('Are you sure you want to logout')) {
             dispatch(logout());
+            dispatch(clearState());
         }
     };
 
     useEffect(() => {
-        dispatch( fetchAllItems({}) );
-    },[]);
+        console.log('Loading items');
+        dispatch(fetchAllItems({}));
+    }, []);
 
     return <DocumentTitle title={"Dashboard"}>
 
@@ -99,7 +96,8 @@ const Dashboard = () => {
                             <Divider/>
                         </ListItem>))}
                     </List> : <Box p={4}>
-                        <Typography variant={'body1'} align={'center'}>There are no items available yet. Add items to show here</Typography>
+                        <Typography variant={'body1'} align={'center'}>There are no items available yet. Add items to
+                            show here</Typography>
                     </Box>}
                 </Paper>
 
